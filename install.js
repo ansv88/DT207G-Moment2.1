@@ -16,7 +16,7 @@ const client = new Client({
 //Loggning av anslutning till databas
 client.connect((err) => {
     if (err) {
-        console.log("Fel vid anslutning: " + err);
+        console.error("Fel vid anslutning: " + err);
     } else {
         console.log("Ansluten till databasen");
     }
