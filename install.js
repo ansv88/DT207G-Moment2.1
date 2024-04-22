@@ -31,6 +31,6 @@ client.query(`
         location TEXT NOT NULL,
         start_date DATE,
         end_date DATE,
-        description TEXT NOT NULL,
+        description TEXT NOT NULL
     )
 `);

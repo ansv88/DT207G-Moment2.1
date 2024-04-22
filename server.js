@@ -38,7 +38,7 @@ app.get("/workexperience", (req, res) => {
 
         //Kontrollera om det finns ett fel vid databasfrågan
         if (err) {
-            console.error("Fel vid databasfråga: ", err); //Loggar felmeddelande
+            console.error("Fel vid databasfråga: ", err); //Logga felmeddelande
             return res.status(500).json({ error: "Internt serverfel. Kontrollera loggar." }); //Svar med statuskod och felmeddelande
         }
 
@@ -108,21 +108,92 @@ app.post("/workexperience", async (req, res) => {
         //Svar till klienten att allt gick bra
         res.status(201).json({ message: "Arbetslivserfarenhet tillagd" });
     } catch (error) {
+        //Logga och hantera eventuella fel vid databasfrågan med 500-status och meddelande
         console.error("Fel vid databasfråga: ", error);
         res.status(500).json({ error: "Internt serverfel" });
     }
 
 });
 
+//Uppdatera tillagd arbetslivserfarenhet
+app.put("/workexperience/:id", async (req, res) => {
+    const workid = req.params.id;
+    const { companyname, jobtitle, location, start_date, end_date, description } = req.body;
 
-app.put("/api/users/:id", (req, res) => {
-    res.json({ message: "User updated: " + req.params.id });
+    //Tomma arrayer för att sedan kunna sätta ihop SQL-frågan
+    const updates = []; //Array som ska lagra de SQL-delar som behövs för att uppdatera kolumnvärden i tabellen
+    const values = []; //Array som ska lagra själva värdena som ska uppdateras i databasen och tabellen
+    let setIndex = 1; //Räknare för att hålla reda på placeholder-numret i SQL-frågan
+
+    //Funktion för att lägga till SQL-uppdateringar om fälten inte är undefined
+    function addUpdate(field, value) {
+        if (value !== undefined) {
+            updates.push(`${field} = $${setIndex++}`);
+            values.push(value);
+        }
+    }
+
+    //Kör funktionen med uppdateringar för varje fält
+    addUpdate('companyname', companyname);
+    addUpdate('jobtitle', jobtitle);
+    addUpdate('location', location);
+    addUpdate('start_date', start_date);
+    addUpdate('end_date', end_date);
+    addUpdate('description', description);
+
+    //Lägg till workid som det sista värdet i values-arrayen
+    values.push(workid);
+
+    //Om inga uppdateringar har gjorts, returnera ett fel
+    if (updates.length === 0) {
+        return res.status(400).json({ error: "Inga uppdateringar är gjorda." });
+    }
+
+    //Skapa SQL-frågan för uppdatering
+    const updateQuery = `UPDATE workexperience SET ${updates.join(', ')} WHERE id = $${setIndex}`;
+
+    //Försök att köra SQL-frågan mot databasen
+    try {
+        const result = await client.query(updateQuery, values);
+        //Om inga rader uppdaterades, skicka 404-status och meddelande att ingen arbetslivserfarenhet hittades
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Jobb med angivet ID hittades inte." });
+        }
+        //Om uppdateringen fungerade, skicka 200-status, meddelande och detaljer om det uppdaterade jobbet
+        res.status(200).json({
+            message: "Jobb uppdaterades.",
+            updatedJob: { workid, companyname, jobtitle, location, start_date, end_date, description }
+        });
+    } catch (error) {
+        //Logga och hantera eventuella fel vid databasfrågan med 500-status och meddelande
+        console.error("Fel vid databasfråga: ", error);
+        res.status(500).json({ error: "Internt serverfel. Kontrollera loggar." });
+    }
 });
 
-app.delete("/api/users/:id", (req, res) => {
-    res.json({ message: "User deleted: " + req.params.id });
+//Ta bort en arbetslivserfarenhet
+app.delete("/workexperience/:id", async (req, res) => {
+    const workid = req.params.id;  //Hämta id
+
+    //Försök radera arbetslivserfarenheten från databasen
+    try {
+        const result = await client.query("DELETE FROM workexperience WHERE id = $1", [workid]);
+
+        //Kontrollera om någon rad faktiskt raderades
+        if (result.rowCount === 0) {
+            //Om ingen rad hittades med angivet ID, skicka 404-status och meddelande
+            return res.status(404).json({ error: "Arbetslivserfarenhet med angett ID hittades inte." });
+        }
+
+        //Raderingen lyckades, skicka bekräftelse
+        res.status(200).json({ message: "Arbetslivserfarenhet borttagen"});
+    } catch (error) {
+        //Logga och hantera eventuella fel vid databasfrågan med 500-status och meddelande
+        console.error("Fel vid databasfråga: ", error);
+        res.status(500).json({ error: "Internt serverfel. Kontrollera loggar." });
+    }
 });
 
 app.listen(port, () => {
-    console.log('Servern körs på port: ' + port);
+    console.log("Servern körs på port: " + port);
 });
