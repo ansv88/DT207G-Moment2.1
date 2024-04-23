@@ -10,7 +10,7 @@ Klona källkodsfilerna, kör kommando npm install för att installera nödvändi
 Installations-skriptet skapar databastabell enligt nedanstående:
 |Tabellnamn|Fält  |
 |--|--|
-|Tabell  | **id**, **companyname**, **jobtitle**, **location**, **start_date**, **end_date**, **description**  |
+|Tabell  | **id**(PK), **companyname**(text), **jobtitle**(text), **location**(text), **start_date**(date), **end_date**(date), **description**(text)  |
 
 Observera att end_date är valbart att ange.
 
